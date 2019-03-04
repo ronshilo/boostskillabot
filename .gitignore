@@ -1,0 +1,7 @@
+.idea/
+__pycache__/
+boostskillatoken.py
+private.key
+db_dir
+boostskillabot_config.yaml
+

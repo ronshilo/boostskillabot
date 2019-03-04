@@ -1,0 +1,5 @@
+---
+bot_token: add_bot_token
+list_of_admins:
+  - foo
+path_to_db_dir: db_dir
