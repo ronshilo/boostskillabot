@@ -21,6 +21,7 @@ UnregisterGroup = 'Unregister group'
 RegisterGroup = 'Register group'
 ListAllGroups = 'List all groups'
 LogOnToday = 'Log on today'
+WhoElsaIsOnToday = 'Who elsa is on today'
 HowToAddGroup = 'How to add a group'
 AdminInfo = 'Admin info'
 
@@ -35,6 +36,7 @@ def private_talk(bot, update: Updater) -> None:
     """
     keyboard = [
         [InlineKeyboardButton(LogOnToday, callback_data=LogOnToday)],
+        [InlineKeyboardButton(WhoElsaIsOnToday, callback_data=WhoElsaIsOnToday)],
         [InlineKeyboardButton(ListAllGroups, callback_data=ListAllGroups)],
         [InlineKeyboardButton(HowToAddGroup, callback_data=HowToAddGroup)]
     ]
