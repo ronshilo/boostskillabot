@@ -219,9 +219,16 @@ def log_on_today(bot, update):
 
     if db['logins'].find_one(user=user_name) is None:
         db['logins'].insert({'user': user_name, today: topic})
+        bot.send_message(text=f'You have log in to today\n\n',
+                         chat_id=update.callback_query.message.chat_id,
+                         message_id=update.callback_query.message.message_id)
     else:
         db_id = db['logins'].find_one(user=user_name)['id']
         db['logins'].upsert({'id': db_id, today: topic}, ['id'])
+        bot.send_message(text=f'One login is enough \n\n',
+                         chat_id=update.callback_query.message.chat_id,
+                         message_id=update.callback_query.message.message_id)
+
 
 
 def button(bot, update):
