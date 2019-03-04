@@ -76,6 +76,7 @@ def group_talk(bot, update: Updater) -> None:
 
 
 def start(bot, update: Updater) -> None:
+    logger.info(f'/start by user {update.effective_user.name}')
     if update.effective_chat.PRIVATE == update.effective_chat.type:
         private_talk(bot, update)
     else:
@@ -225,7 +226,7 @@ def log_on_today(bot, update):
 
 def button(bot, update):
     query = update.callback_query
-
+    logger.info(f'/start by user {update.effective_user.name} has hit the {query.data} button')
     if query.data == UnregisterGroup:
 
         unregister_group(bot, update)
