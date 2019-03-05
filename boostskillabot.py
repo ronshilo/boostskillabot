@@ -6,8 +6,9 @@
 """
 import logging
 import yaml
+import telegram
 # noinspection PyPackageRequirements
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 import datetime
 import dataset
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 UnregisterGroup = 'Unregister group'
 RegisterGroup = 'Register group'
 ListAllGroups = 'List all groups'
-LogOnToday = 'Log on today'
+LogOnToday = 'Login today'
 WhoElsaIsOnToday = 'Who elsa is on today'
 HowToAddGroup = 'How to add a group'
 AdminInfo = 'Admin info'
@@ -51,6 +52,10 @@ def private_talk(bot, update: Updater) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(f'Hi {the_user}, you can also see admin views', reply_markup=reply_markup)
 
+
+    keyboard = [[KeyboardButton('/start',)]]
+    reply_markup = ReplyKeyboardMarkup(keyboard)
+    update.message.reply_text('koko', reply_markup=reply_markup)
 
 def is_group_active(chat_id: int) -> bool:
     for group in db['groups']:
@@ -131,27 +136,6 @@ def set_group_as_inactive(chat_id: int):
     logger.info(f'the group {group_name} is set as inactive')
 
 
-def save_group(bot, update):
-    chat_id = update.effective_chat.id
-    invite_link = bot.export_chat_invite_link(chat_id)
-    chat = bot.get_chat(chat_id)
-    if invite_link is None:
-        logger.error('cant save group {} the is no link'.format(chat.title))
-
-    else:
-        new_group = GroupInfo(name=chat.title, link=invite_link, chat_id=chat_id)
-        new_group.description = chat.description
-        new_group.group_admin = update.effective_user.name
-
-        if is_group_in_db(chat_id):
-            if is_group_active(chat_id):
-                logger.info(f'{chat.title} is db as {chat_id}')
-            else:
-                set_group_as_active(chat_id)
-        else:
-            db['groups'].insert(new_group.group_dict())
-
-
 def unregister_group(bot, update):
     query = update.callback_query
     chat_id = update.effective_chat.id
@@ -175,8 +159,41 @@ def unregister_group(bot, update):
 
 
 def register_group(bot, update):
-    save_group(bot, update)
+    chat_id = update.effective_chat.id
+    try:
+        invite_link = bot.export_chat_invite_link(chat_id)
+    except telegram.error.BadRequest:
+        text_to_send = 'Oops...\nit looks like you\'re group is not setup as a supergroup.\nPlease review how to ' \
+                       'setup a group:'
+        keyboard = [[InlineKeyboardButton(HowToAddGroup, callback_data=HowToAddGroup)]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        bot.send_message(text=text_to_send,
+                         chat_id=update.callback_query.message.chat_id,
+                         message_id=update.callback_query.message.message_id,
+                         reply_markup=reply_markup)
+
+        return
+
+    chat = bot.get_chat(chat_id)
     query = update.callback_query
+    if invite_link is None:
+        logger.error('cant save group {} the is no link'.format(chat.title))
+
+    else:
+        new_group = GroupInfo(name=chat.title, link=invite_link, chat_id=chat_id)
+        new_group.description = chat.description
+        new_group.group_admin = update.effective_user.name
+
+        if is_group_in_db(chat_id):
+            if is_group_active(chat_id):
+                logger.info(f'{chat.title} is db as {chat_id}')
+            else:
+                set_group_as_active(chat_id)
+        else:
+            db['groups'].insert(new_group.group_dict())
+
+
+
     bot.edit_message_text(text="Register group: {}".format(str(update.effective_chat.title)),
                           chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
@@ -197,7 +214,7 @@ def list_all_groups(bot, update):
                 [InlineKeyboardButton(f"join", url=chat.invite_link)]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(text=f'Name: {chat.title}.\nDescription: {chat.description}.\nChat admin: {admin_user}',
+            bot.send_message(text=f'Name: {chat.title}.\nDescription: {chat.description}.\nGroup POC: {admin_user}',
                              chat_id=query.message.chat_id,
                              message_id=query.message.message_id,
                              reply_markup=reply_markup)
