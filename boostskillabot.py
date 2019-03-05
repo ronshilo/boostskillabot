@@ -221,18 +221,28 @@ def log_on_today(bot, update):
 
     if db['logins'].find_one(user=user_name) is None:
         db['logins'].insert({'user': user_name, today: topic})
-        bot.send_message(text=f'You have log in to today\n\n',
-                         chat_id=update.callback_query.message.chat_id,
-                         message_id=update.callback_query.message.message_id)
+
     else:
         db_id = db['logins'].find_one(user=user_name)['id']
         db['logins'].upsert({'id': db_id, today: topic}, ['id'])
-        bot.send_message(text=f'One login is enough \n\n',
-                         chat_id=update.callback_query.message.chat_id,
-                         message_id=update.callback_query.message.message_id)
+
+    bot.send_message(text=f'You have log in as doing {topic}\n\n',
+                     chat_id=update.callback_query.message.chat_id,
+                     message_id=update.callback_query.message.message_id)
 
 
+def who_else_is_on_today(bot, update) -> None:
+    today = get_date_str()
+    who_is_on_str = f'{today}\nUser | Project\n'
+    for user_login in db['logins']:
+        if user_login.get(today) is not None:
+            user_name = user_login['user']
+            project = user_login[today]
+            who_is_on_str += f'{user_name} | {project}\n'
 
+    bot.send_message(text=who_is_on_str,
+                     chat_id=update.callback_query.message.chat_id,
+                     message_id=update.callback_query.message.message_id)
 def button(bot, update):
     query = update.callback_query
     logger.info(f'/start by user {update.effective_user.name} has hit the {query.data} button')
@@ -255,6 +265,10 @@ def button(bot, update):
     elif query.data == LogOnToday:
 
         log_on_today(bot, update)
+
+    elif query.data == WhoElsaIsOnToday:
+
+        who_else_is_on_today(bot, update)
 
     else:
         bot.send_message(text="you have asked to: {}".format(str(query.data)),
