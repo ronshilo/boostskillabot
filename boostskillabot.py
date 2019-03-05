@@ -78,7 +78,7 @@ def group_talk(bot, update: Updater) -> None:
 
 
 def start(bot, update: Updater) -> None:
-    logger.info(f'/start by user {update.effective_user.name}')
+    logger.info(f'User: {update.effective_user.name} click /start')
     if update.effective_chat.PRIVATE == update.effective_chat.type:
         private_talk(bot, update)
     else:
@@ -233,19 +233,21 @@ def log_on_today(bot, update):
 
 def who_else_is_on_today(bot, update) -> None:
     today = get_date_str()
-    who_is_on_str = f'{today}\nUser | Project\n'
+    who_is_on_str = '{0}\n{1:15} | {2:20}\n'.format(today,'User', 'Project')
+    count_users = 0
     for user_login in db['logins']:
         if user_login.get(today) is not None:
+            count_users += 1
             user_name = user_login['user']
             project = user_login[today]
-            who_is_on_str += f'{user_name} | {project}\n'
-
+            who_is_on_str +='{0:15} | {1:20}\n'.format(user_name, project)
+    who_is_on_str += f'There are {count_users} logged on users'
     bot.send_message(text=who_is_on_str,
                      chat_id=update.callback_query.message.chat_id,
                      message_id=update.callback_query.message.message_id)
 def button(bot, update):
     query = update.callback_query
-    logger.info(f'/start by user {update.effective_user.name} has hit the {query.data} button')
+    logger.info(f'User: {update.effective_user.name} has hit the <{query.data}> button')
     if query.data == UnregisterGroup:
 
         unregister_group(bot, update)
