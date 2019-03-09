@@ -8,15 +8,15 @@ import logging
 import yaml
 import telegram
 # noinspection PyPackageRequirements
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ParseMode
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 import datetime
 import dataset
+import tabulate
 
 logging.basicConfig(format='[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 UnregisterGroup = 'Unregister group'
 RegisterGroup = 'Register group'
@@ -25,6 +25,19 @@ LogOnToday = 'Login today'
 WhoElsaIsOnToday = 'Who elsa is on today'
 HowToAddGroup = 'How to add a group'
 AdminInfo = 'Admin info'
+Rules = 'Rules'
+MoreInfo = 'MoreInfo'
+
+rules_str = ''
+
+
+def send_start_keyboard(bot, update: Updater):
+    keyboard = [[KeyboardButton('/start', )]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    bot.send_message(text='use the /start key to reload this menu',
+                     chat_id=update.effective_chat.id,
+                     # reply_to_message_id=update.effective_message.message_id,
+                     reply_markup=reply_markup)
 
 
 # noinspection PyUnusedLocal
@@ -39,7 +52,9 @@ def private_talk(bot, update: Updater) -> None:
         [InlineKeyboardButton(LogOnToday, callback_data=LogOnToday)],
         [InlineKeyboardButton(WhoElsaIsOnToday, callback_data=WhoElsaIsOnToday)],
         [InlineKeyboardButton(ListAllGroups, callback_data=ListAllGroups)],
-        [InlineKeyboardButton(HowToAddGroup, callback_data=HowToAddGroup)]
+        [InlineKeyboardButton(HowToAddGroup, callback_data=HowToAddGroup)],
+        [InlineKeyboardButton(Rules, callback_data=Rules)],
+        [InlineKeyboardButton(MoreInfo, callback_data=MoreInfo)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text('Please choose:', reply_markup=reply_markup)
@@ -52,10 +67,6 @@ def private_talk(bot, update: Updater) -> None:
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(f'Hi {the_user}, you can also see admin views', reply_markup=reply_markup)
 
-
-    keyboard = [[KeyboardButton('/start',)]]
-    reply_markup = ReplyKeyboardMarkup(keyboard)
-    update.message.reply_text('koko', reply_markup=reply_markup)
 
 def is_group_active(chat_id: int) -> bool:
     for group in db['groups']:
@@ -88,6 +99,8 @@ def start(bot, update: Updater) -> None:
         private_talk(bot, update)
     else:
         group_talk(bot, update)
+
+    send_start_keyboard(bot, update)
 
 
 def admin_info(bot, update) -> None:
@@ -136,26 +149,26 @@ def set_group_as_inactive(chat_id: int):
     logger.info(f'the group {group_name} is set as inactive')
 
 
+def send_message(text: str, bot, update, reply_markup=None) -> None:
+    bot.send_message(text=text,
+                     chat_id=update.callback_query.message.chat_id,
+                     message_id=update.callback_query.message.message_id,
+                     reply_markup=reply_markup)
+
+
 def unregister_group(bot, update):
-    query = update.callback_query
     chat_id = update.effective_chat.id
     for group in db['groups']:
         if chat_id == group['chat_id']:
             if is_group_active(chat_id):
                 set_group_as_inactive(chat_id)
-                bot.send_message(text="removed group: {}".format(str(update.effective_chat.title)),
-                                 chat_id=query.message.chat_id,
-                                 message_id=query.message.message_id)
+                send_message("removed group: {}".format(str(update.effective_chat.title)), bot, update)
                 return
             else:
-                bot.send_message(text="group {} is not active: ".format(str(update.effective_chat.title)),
-                                 chat_id=query.message.chat_id,
-                                 message_id=query.message.message_id)
+                send_message("group {} is not active: ".format(str(update.effective_chat.title)), bot, update)
                 return
 
-    bot.send_message(text="group {} is unknown: ".format(str(update.effective_chat.title)),
-                     chat_id=query.message.chat_id,
-                     message_id=query.message.message_id)
+    send_message("group {} is unknown: ".format(str(update.effective_chat.title)), bot, update)
 
 
 def register_group(bot, update):
@@ -167,11 +180,7 @@ def register_group(bot, update):
                        'setup a group:'
         keyboard = [[InlineKeyboardButton(HowToAddGroup, callback_data=HowToAddGroup)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.send_message(text=text_to_send,
-                         chat_id=update.callback_query.message.chat_id,
-                         message_id=update.callback_query.message.message_id,
-                         reply_markup=reply_markup)
-
+        send_message(text_to_send, bot, update, reply_markup=reply_markup)
         return
 
     chat = bot.get_chat(chat_id)
@@ -192,18 +201,13 @@ def register_group(bot, update):
         else:
             db['groups'].insert(new_group.group_dict())
 
-
-
     bot.edit_message_text(text="Register group: {}".format(str(update.effective_chat.title)),
                           chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
 
 
 def list_all_groups(bot, update):
-    query = update.callback_query
-    bot.send_message(text=f'The list of groups is:\n\n',
-                     chat_id=query.message.chat_id,
-                     message_id=query.message.message_id)
+    send_message(f'The list of groups is:\n\n', bot, update)
     count = 0
     for group in db['groups']:
         if is_group_active(group['chat_id']):
@@ -214,14 +218,11 @@ def list_all_groups(bot, update):
                 [InlineKeyboardButton(f"join", url=chat.invite_link)]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            bot.send_message(text=f'Name: {chat.title}.\nDescription: {chat.description}.\nGroup POC: {admin_user}',
-                             chat_id=query.message.chat_id,
-                             message_id=query.message.message_id,
-                             reply_markup=reply_markup)
+            send_message(f'Name: {chat.title}.\nDescription:'
+                         f' {chat.description}.\nGroup POC: {admin_user}',
+                         bot, update, reply_markup=reply_markup)
 
-    bot.send_message(text=f'There are {count} active groups\n\n',
-                     chat_id=query.message.chat_id,
-                     message_id=query.message.message_id)
+    send_message(f'There are {count} active groups\n\n', bot, update)
 
 
 def get_date_str() -> str:
@@ -233,35 +234,64 @@ def log_on_today(bot, update):
     today = get_date_str()
     user_name = update.effective_user.name
     topic = update.effective_chat.title
+    user_id = update.effective_chat.id
     if topic is None:
         topic = 'Ask Me'
 
     if db['logins'].find_one(user=user_name) is None:
-        db['logins'].insert({'user': user_name, today: topic})
+        db['logins'].insert({'user': user_name, 'user_id': user_id , today: topic})
 
     else:
         db_id = db['logins'].find_one(user=user_name)['id']
-        db['logins'].upsert({'id': db_id, today: topic}, ['id'])
+        db['logins'].upsert({'id': db_id, today: topic, 'user_id': user_id}, ['id'])
 
-    bot.send_message(text=f'You have log in as doing {topic}\n\n',
-                     chat_id=update.callback_query.message.chat_id,
-                     message_id=update.callback_query.message.message_id)
+    send_message(f'You have log in as doing {topic}\n\n', bot, update)
 
 
 def who_else_is_on_today(bot, update) -> None:
     today = get_date_str()
-    who_is_on_str = '{0}\n{1:15} | {2:20}\n'.format(today,'User', 'Project')
+    list_of_dict = []
+    max_len = 0
+    for user_login in db['logins']:
+        if user_login.get(today) is not None:
+            max_len = max(max_len, len(user_login['user']))
+
+    USER = 'User'
+    PROJECT = 'Project'
+    who_is_on_str = '{:<20s} | {:<34s}\n'.format(USER, PROJECT)
     count_users = 0
+    keyboard = []
+
     for user_login in db['logins']:
         if user_login.get(today) is not None:
             count_users += 1
             user_name = user_login['user']
+            user_id = user_login['user_id']
             project = user_login[today]
-            who_is_on_str +='{0:15} | {1:20}\n'.format(user_name, project)
-    who_is_on_str += f'There are {count_users} logged on users'
+            list_of_dict.append({'User': '{0}'.format(user_name), 'Project': project})
+            keyboard.append([InlineKeyboardButton(user_name), [InlineKeyboardButton(project)]])
+            print('{:<20s} | {:<34s}\n'.format(user_name, project))
+            who_is_on_str += '{:<20s} | {:<34s}\n'.format(user_name, project)
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(text='fooo',
+                     chat_id=update.callback_query.message.chat_id,
+                     message_id=update.callback_query.message.message_id,
+                     reply_markup=reply_markup)
+    who_is_on_str = '{}'.format(who_is_on_str)
+    message = tabulate.tabulate(list_of_dict, headers='keys', tablefmt='simple')
+    #message = "{}".format(message)
+    print(who_is_on_str)
+    #who_is_on_str += f'There are {count_users} logged on users'
+    who_is_on_str = '`{}`'.format(who_is_on_str)
+
+
     bot.send_message(text=who_is_on_str,
                      chat_id=update.callback_query.message.chat_id,
-                     message_id=update.callback_query.message.message_id)
+                     message_id=update.callback_query.message.message_id,
+                     parse_mode=ParseMode.MARKDOWN)
+
+
 def button(bot, update):
     query = update.callback_query
     logger.info(f'User: {update.effective_user.name} has hit the <{query.data}> button')
@@ -288,6 +318,12 @@ def button(bot, update):
     elif query.data == WhoElsaIsOnToday:
 
         who_else_is_on_today(bot, update)
+
+    elif query.data == Rules:
+        send_rules(bot, update)
+
+    elif query.data == MoreInfo:
+        send_more_info(bot, update)
 
     else:
         bot.send_message(text="you have asked to: {}".format(str(query.data)),
@@ -323,14 +359,38 @@ def load_config(path_to_config_file: str) -> dict:
         return config
 
 
+def get_text_file(path_to_file: str) -> str:
+    try:
+        logger.info(f'going to open {path_to_file}')
+        with open(path_to_file) as fid:
+            return ''.join(fid.readlines())
+    except FileNotFoundError:
+        logger.info(f'there is no file at {path_to_file}')
+        return 'there are no rules.'
+
+
+def send_rules(bot, update):
+    send_message(rules, bot, update)
+
+
+def send_more_info(bot, update):
+    send_message(more_info, bot, update)
+
+
 def main():
-    # Create the Updater and pass it your bot's token.
     # noinspection PyGlobalUndefined
     global config
     global db
+    global rules
+    global more_info
+
+    # set set constants
     path_to_config_file = 'boostskillabot_config.yaml'
     config = load_config(path_to_config_file=path_to_config_file)
     db = get_db(db_file_path=config['path_to_db_dir'])
+    rules = get_text_file('textfiles/rules.txt')
+    more_info = get_text_file('textfiles/moreinfo.txt')
+
     updater = Updater(token=config['bot_token'])
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
