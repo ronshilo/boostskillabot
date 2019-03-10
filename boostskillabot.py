@@ -260,7 +260,6 @@ def who_else_is_on_today(bot, update) -> None:
     PROJECT = 'Project'
     who_is_on_str = '{:<20s} | {:<34s}\n'.format(USER, PROJECT)
     count_users = 0
-    keyboard = []
 
     for user_login in db['logins']:
         if user_login.get(today) is not None:
@@ -269,23 +268,14 @@ def who_else_is_on_today(bot, update) -> None:
             user_id = user_login['user_id']
             project = user_login[today]
             list_of_dict.append({'User': '{0}'.format(user_name), 'Project': project})
-            keyboard.append([InlineKeyboardButton(user_name), [InlineKeyboardButton(project)]])
-            print('{:<20s} | {:<34s}\n'.format(user_name, project))
             who_is_on_str += '{:<20s} | {:<34s}\n'.format(user_name, project)
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.send_message(text='fooo',
-                     chat_id=update.callback_query.message.chat_id,
-                     message_id=update.callback_query.message.message_id,
-                     reply_markup=reply_markup)
     who_is_on_str = '{}'.format(who_is_on_str)
     message = tabulate.tabulate(list_of_dict, headers='keys', tablefmt='simple')
-    #message = "{}".format(message)
+    message = "{}".format(message)
+    who_is_on_str += f'There are {count_users} logged on users'
+    who_is_on_str = '`{}`'.format(message)
     print(who_is_on_str)
-    #who_is_on_str += f'There are {count_users} logged on users'
-    who_is_on_str = '`{}`'.format(who_is_on_str)
-
-
     bot.send_message(text=who_is_on_str,
                      chat_id=update.callback_query.message.chat_id,
                      message_id=update.callback_query.message.message_id,
