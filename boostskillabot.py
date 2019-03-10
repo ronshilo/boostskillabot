@@ -267,7 +267,8 @@ def who_else_is_on_today(bot, update) -> None:
             user_name = user_login['user']
             user_id = user_login['user_id']
             project = user_login[today]
-            list_of_dict.append({'User': '{0}'.format(user_name), 'Project': project})
+            if len(project) >= 34:
+                project = project[:32] + '...'
             who_is_on_str += '{:<20s} | {:<34s}\n'.format(user_name, project)
 
     who_is_on_str = '{}'.format(who_is_on_str)
