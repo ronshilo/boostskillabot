@@ -1,1 +1,14 @@
-How to add a Boostskilla grop
+How to add a Boostskilla group:
+ios:
+Open Telegram.
+Click the new message icon on the top right.
+New group.
+Search for "Boostskillabot" and add it to your group.
+Giving the group short name describing the Boostskilla subject for example "Learning python"
+On the top right click the group icon to reach to "group info" menu.
+Click "Edit".
+Add Boostskillabot to the Administrators with full privileges including add  new Admins.
+Click Done
+Go back to the group chat page and type "/start"
+Then click register a group.
+That's it you're done! your group will now appear when the bot is asked to list all groups.

@@ -316,6 +316,9 @@ def button(bot, update):
     elif query.data == MoreInfo:
         send_more_info(bot, update)
 
+    elif query.data == HowToAddGroup:
+        send_how_to_add_a_group(bot, update)
+
     else:
         bot.send_message(text="you have asked to: {}".format(str(query.data)),
                          chat_id=query.message.chat_id,
@@ -367,6 +370,8 @@ def send_rules(bot, update):
 def send_more_info(bot, update):
     send_message(more_info, bot, update)
 
+def send_how_to_add_a_group(bot, update):
+    send_message(how_to_add_a_group, bot, update)
 
 def main():
     # noinspection PyGlobalUndefined
@@ -374,14 +379,14 @@ def main():
     global db
     global rules
     global more_info
-
+    global how_to_add_a_group
     # set set constants
     path_to_config_file = 'boostskillabot_config.yaml'
     config = load_config(path_to_config_file=path_to_config_file)
     db = get_db(db_file_path=config['path_to_db_dir'])
     rules = get_text_file('textfiles/rules.txt')
     more_info = get_text_file('textfiles/moreinfo.txt')
-
+    how_to_add_a_group = get_text_file('textfiles/how_to_open_a_group.txt')
     updater = Updater(token=config['bot_token'])
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
