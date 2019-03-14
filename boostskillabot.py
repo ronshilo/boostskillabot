@@ -27,6 +27,8 @@ HowToAddGroup = 'How to add a group'
 AdminInfo = 'Admin info'
 Rules = 'Rules'
 MoreInfo = 'MoreInfo'
+USER = 'User'
+PROJECT = 'Project'
 
 rules_str = ''
 
@@ -248,16 +250,16 @@ def log_on_today(bot, update):
     send_message(f'You have log in as doing {topic}\n\n', bot, update)
 
 
+def clip_long_string(the_string: str , max_len: int = 34):
+
+    if len(the_string) >= max_len:
+        return the_string[:max_len - 3] + '...'
+    else:
+        return the_string
+
+
 def who_else_is_on_today(bot, update) -> None:
     today = get_date_str()
-    list_of_dict = []
-    max_len = 0
-    for user_login in db['logins']:
-        if user_login.get(today) is not None:
-            max_len = max(max_len, len(user_login['user']))
-
-    USER = 'User'
-    PROJECT = 'Project'
     who_is_on_str = '{:<20s} | {:<34s}\n'.format(USER, PROJECT)
     count_users = 0
 
@@ -265,17 +267,15 @@ def who_else_is_on_today(bot, update) -> None:
         if user_login.get(today) is not None:
             count_users += 1
             user_name = user_login['user']
+            user_name = clip_long_string(user_name)
             user_id = user_login['user_id']
             project = user_login[today]
-            if len(project) >= 34:
-                project = project[:32] + '...'
+            project = clip_long_string(project)
             who_is_on_str += '{:<20s} | {:<34s}\n'.format(user_name, project)
 
-    who_is_on_str = '{}'.format(who_is_on_str)
-    message = tabulate.tabulate(list_of_dict, headers='keys', tablefmt='simple')
-    message = "{}".format(message)
-    who_is_on_str += f'There are {count_users} logged on users'
-    who_is_on_str = '`{}`'.format(message)
+
+    who_is_on_str += f'\nThere are {count_users} logged on users'
+    who_is_on_str = '`{}`'.format(who_is_on_str)
     print(who_is_on_str)
     bot.send_message(text=who_is_on_str,
                      chat_id=update.callback_query.message.chat_id,
@@ -315,6 +315,9 @@ def button(bot, update):
 
     elif query.data == MoreInfo:
         send_more_info(bot, update)
+
+    elif query.data == HowToAddGroup:
+        send_how_to_add_a_group(bot, update)
 
     else:
         bot.send_message(text="you have asked to: {}".format(str(query.data)),
@@ -367,6 +370,8 @@ def send_rules(bot, update):
 def send_more_info(bot, update):
     send_message(more_info, bot, update)
 
+def send_how_to_add_a_group(bot, update):
+    send_message(how_to_add_a_group, bot, update)
 
 def main():
     # noinspection PyGlobalUndefined
@@ -374,14 +379,14 @@ def main():
     global db
     global rules
     global more_info
-
+    global how_to_add_a_group
     # set set constants
     path_to_config_file = 'boostskillabot_config.yaml'
     config = load_config(path_to_config_file=path_to_config_file)
     db = get_db(db_file_path=config['path_to_db_dir'])
     rules = get_text_file('textfiles/rules.txt')
     more_info = get_text_file('textfiles/moreinfo.txt')
-
+    how_to_add_a_group = get_text_file('textfiles/how_to_open_a_group.txt')
     updater = Updater(token=config['bot_token'])
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CallbackQueryHandler(button))
